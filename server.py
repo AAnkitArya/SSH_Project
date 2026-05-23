@@ -1,6 +1,8 @@
 
 import socket               
-
+import os
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+KEY = b"keykeykeykeykeykeykeykeykeykeyke"
 
 
 
@@ -15,9 +17,22 @@ def run_server():
     print("listening on port 8888")
     conn,addr=s.accept()
     print(f"connection estb from port:{addr}")
-    raw_data = conn.recv(1024)
-    plaintext_message = raw_data.decode('utf-8')
-    print(f"message: {plaintext_message}")
+    payload = conn.recv(1024)
+    if len(payload) > 12:
+        nonce = payload[:12]
+        ciphertext = payload[12:]
+
+        aesgcm = AESGCM(KEY)
+    
+        try:
+            decrypted_bytes=aesgcm.decrypt(nonce,ciphertext,None)
+            message=decrypted_bytes.decode('utf-8')
+            print(f"Message:{message}")
+        except Exception as e:
+            print("Decryption failed!")
+    else:
+        print(f"bad payload")
+   
     conn.close()
     s.close()
 

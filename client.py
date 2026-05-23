@@ -1,4 +1,9 @@
-import socket               
+import socket 
+import os
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+
+KEY = b"keykeykeykeykeykeykeykeykeykeyke"  
 
 def client():
     c=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -6,7 +11,12 @@ def client():
     c.connect(('127.0.0.1', 8888))
 
     message = "Chill hai"
-    c.send(message.encode('utf-8'))
+    bytes=message.encode('utf-8')
+    aesgcm = AESGCM(KEY)
+    nonce = os.urandom(12)
+    ciphertext = aesgcm.encrypt(nonce, bytes, None)
+    payload=nonce+ciphertext
+    c.send(payload)
     print("message sent")
     c.close()
 
