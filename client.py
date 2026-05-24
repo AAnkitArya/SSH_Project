@@ -33,7 +33,28 @@ JLIbpQF0wPNCROuJugssXrEihru9XBweExwRjpl1qF1vlB5Lq5mfKxy77rgA4mls
 TujZqWB7LQ5v/X5mOX9C8rlsfQ==
 -----END PRIVATE KEY-----"""
 
- 
+ client_private_key=serialization.load_pem_public_key(CLIENT_PRIVATE_KEY_PEM.encode('utf-8'),password=None)
+
+
+
+def sign_signature():
+    c=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    c.connect(('127.0.0.1', 8888))
+    c.listen(1)
+    conn,addr=c.accept()
+    received_signature_data=conn.recv(4096)
+    nonce=received_signature_data[:12]
+    ciphertext=received_signature_data[12:] 
+    plaintext=aesgcm.decrypt(nonce,ciphertext,None)
+    raw_signature = client_private_key.sign(
+    challenge_bytes,   # The raw 32 bytes you just decrypted above
+    raw_signature = client_private_key.sign(challenge_bytes,padding.PSS(mgf=padding.MGF1(hashes.SHA256()),salt_length=padding.PSS.MAX_LENGTH),hashes.SHA256()    #padding dal rhe hain after creating signature from the alredy present private key
+    nonce2=os.urandom(12)
+    signature_encrypt=aesgcm.encrypt(nonce2,raw_signature,None)
+    c.sendall(nonce+signature_encrypt)
+    c.sendall
+)
+)
 
 def client():
     c=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -73,7 +94,9 @@ def client():
 
 
     
+
 if __name__ == "__main__":
+    sign_signature()
     client()
 
 
