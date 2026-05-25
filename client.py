@@ -37,17 +37,14 @@ client_private_key=serialization.load_pem_private_key(CLIENT_PRIVATE_KEY_PEM.enc
 
 def client():
 
-
     c=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     print("Connecting")
     c.connect(('127.0.0.1', 8888))
 
-
-
     server_public_key_bytes = c.recv(1024)
-    server_public_key = serialization.load_pem_public_key(server_public_key_bytes) #bytes to object
+    server_public_key = serialization.load_pem_public_key(server_public_key_bytes)
 
-    session_key = os.urandom(32) #random 32 bytes
+    session_key = os.urandom(32)
 
     encrypted_session_key = server_public_key.encrypt(
         session_key,
@@ -58,14 +55,8 @@ def client():
         )
     )
 
-    c.sendall(encrypted_session_key)   #send the key after mixing it with public key received from server
+    c.sendall(encrypted_session_key)
     
-
-
-
-
-    
-
     aesgcm=AESGCM(session_key)
     challenge_data = c.recv(512)
     srv_nonce = challenge_data[:12]
@@ -74,7 +65,7 @@ def client():
     raw_challenge = aesgcm.decrypt(srv_nonce, srv_ciphertext, None)
 
     raw_signature = client_private_key.sign(raw_challenge,padding.PSS(mgf=padding.MGF1(hashes.SHA256()),salt_length=padding.PSS.MAX_LENGTH),hashes.SHA256())
-    #khud key key se encrypt ye karega
+    
     noncesig = os.urandom(12)
     en_sign = aesgcm.encrypt(noncesig, raw_signature, None)
     c.sendall(noncesig + en_sign)
@@ -85,28 +76,45 @@ def client():
         print("[-] FATAL: Server dropped the connection unexpectedly. Check server logs.")
         c.close()
         return
-
         
     status_nonce = status_payload[:12]
     status_cipher = status_payload[12:]
     auth_status = aesgcm.decrypt(status_nonce, status_cipher, None).decode('utf-8')
     if auth_status != "AUTH_SUCCESS":
-        print("disconnectting")
+        print("disconnecting")
         c.close()
         return
-    message = "Chill hai boss"
+    print("started...")
+    print("type exit or quit to stop")
 
-    nonce = os.urandom(12)
-    ciphertext = aesgcm.encrypt(nonce, message.encode('utf-8'), None) #aesgcm object already has the session key from the last line. nonce and session key both will be used to encrypt it, nonce for uniquiness so that hacker cannot and see if there are identical packets.
-    c.sendall(nonce+ciphertext)
-    print("message sent")
+    while True:
+        command = input("sshshell> ")
+        if not command.strip():
+            continue
+
+        cmdnonce = os.urandom(12)
+        cmdciphertext = aesgcm.encrypt(cmdnonce, command.encode('utf-8'), None)
+        c.sendall(cmdnonce + cmdciphertext)
+
+        if command.strip().lower() in ['exit', 'quit']:
+            break
+
+        # recieving it back
+        respayload = c.recv(8192)
+        if not respayload:
+            print("connection lost")
+            break
+        respnonce = respayload[:12]
+        respciphertext = respayload[12:]
+
+        try:
+            output = aesgcm.decrypt(respnonce, respciphertext, None).decode('utf-8')
+            print(output, end="")
+        except Exception as e:
+            print(f"{e}")
+            break
+
     c.close()
-
-
-
-    
 
 if __name__ == "__main__":
     client()
-
-
